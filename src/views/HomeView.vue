@@ -9,19 +9,20 @@
       />
     </div>
     <div v-if="searchResults.length > 0">
-      <div v-for="result in searchResults" :key="result.id + result.media_type" class="search-result" @click="goToDetail(result)">
+      <div v-for="(result, index) in searchResults" :key="result.id + (result.media_type || index)" class="search-result" @click="goToDetail(result)">
         <img :src="getImageUrl(result)" :alt="result.title || result.name">
         <h2>{{ result.title || result.name }}</h2>
       </div>
     </div>
     <div v-else>
-      <div v-for="movie in movies" :key="movie.id" class="movie" @click="goToMovie(movie.id)">
+      <div v-for="(movie, index) in movies" :key="movie.id + 'movie-' + index" class="movie" @click="goToMovie(movie)">
         <img :src="'https://image.tmdb.org/t/p/w500' + movie.poster_path" :alt="movie.title">
         <h2>{{ movie.title }}</h2>
       </div>
     </div>
   </main>
 </template>
+
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
@@ -62,13 +63,13 @@ function goToDetail(result) {
   if (result.media_type === 'movie') {
     router.push({ name: 'MovieDetails', params: { id: result.id } });
   } else if (result.media_type === 'tv') {
-    router.push({ name: 'TvShowDetails', params: { id: result.id } }); // Remplace 'TvShowDetails' par le nom de la route de tes détails de série
+    router.push({ name: 'TvShowDetails', params: { id: result.id } }); 
   } else if (result.media_type === 'person') {
     router.push({ name: 'ActorDetails', params: { id: result.id } });
   }
 }
-function goToMovie(movieId) {
-  router.push({ name: 'MovieDetails', params: { id: movieId } });
+function goToMovie(movie) {
+  router.push({ name: 'MovieDetails', params: { id: movie.id } });
 }
 function getImageUrl(result) {
   return result.poster_path || result.profile_path
