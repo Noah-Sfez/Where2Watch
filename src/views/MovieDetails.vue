@@ -61,17 +61,28 @@
         </div>
     </div>
     </div>
-  </div>
+    </div>
+    <div class="recommendations">
+      <h2>Films recommandés</h2>
+      <div class="recommended-movies">
+        <div v-for="recommended in recommendations" :key="recommended.id" class="recommended-movie" @click="goToMovieDetails(recommended.id)">
+          <img :src="'https://image.tmdb.org/t/p/w200' + recommended.poster_path" :alt="recommended.title">
+          <h3>{{ recommended.title }}</h3>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+
 const route = useRoute();
-const router = useRouter(); // Initialise router avec useRouter
+const router = useRouter();
 const movie = ref({});
 const cast = ref([]);
+const recommendations = ref([]);
 const streamingOptions = ref({
   flatrate: [],
   buy: [],
@@ -79,28 +90,46 @@ const streamingOptions = ref({
 });
 const movieGenres = ref('');
 const movieTrailer = ref('');
-function goToActor(id) {
-  // Assure-toi que le nom de la route est correctement configuré dans ton routeur
-  router.push({ name: 'ActorDetails', params: { id } });
-}
-onMounted(async () => {
-  const apiKey = 'a446566ae142c41aa0fcfd2febbee065';
-  const movieResponse = await axios.get(`https://api.themoviedb.org/3/movie/${route.params.id}?api_key=${apiKey}&language=fr-FR&append_to_response=videos,credits`);
+const apiKey = 'a446566ae142c41aa0fcfd2febbee065';
+const baseUrl = 'https://api.themoviedb.org/3';
+
+// Fonction pour charger les détails du film
+async function loadMovieDetails(movieId) {
+  const movieResponse = await axios.get(`${baseUrl}/movie/${movieId}?api_key=${apiKey}&language=fr-FR&append_to_response=videos,credits`);
   movie.value = movieResponse.data;
-  cast.value = movieResponse.data.credits.cast.slice(0, 10); // Limiter à 10 membres du casting pour l'affichage
+  cast.value = movieResponse.data.credits.cast.slice(0, 10);
   movieGenres.value = movieResponse.data.genres.map(genre => genre.name).join(', ');
   const trailer = movieResponse.data.videos.results.find(video => video.site === 'YouTube' && video.type === 'Trailer');
   movieTrailer.value = trailer ? trailer.key : '';
-  
-  const providersResponse = await axios.get(`https://api.themoviedb.org/3/movie/${route.params.id}/watch/providers?api_key=${apiKey}`);
-  const providersData = providersResponse.data.results.FR || {}; // Assure-toi de gérer le cas où 'FR' pourrait ne pas être disponible
+  const providersResponse = await axios.get(`${baseUrl}/movie/${movieId}/watch/providers?api_key=${apiKey}`);
+  const providersData = providersResponse.data.results.FR || {};
   streamingOptions.value = {
     flatrate: providersData.flatrate || [],
     buy: providersData.buy || [],
     rent: providersData.rent || [],
   };
+  const recommendationsResponse = await axios.get(`${baseUrl}/movie/${movieId}/recommendations?api_key=${apiKey}&language=fr-FR`);
+  recommendations.value = recommendationsResponse.data.results;
+}
+
+// Watcher sur la route pour recharger les données quand l'ID change
+watch(() => route.params.id, (newId) => {
+  loadMovieDetails(newId);
 });
+
+onMounted(() => {
+  loadMovieDetails(route.params.id);
+});
+
+function goToMovieDetails(movieId) {
+  router.push({ name: 'MovieDetails', params: { id: movieId } });
+}
+
+function goToActor(id) {
+  router.push({ name: 'ActorDetails', params: { id } });
+}
 </script>
+
 <style>
 .movie-details {
   display: flex;
@@ -163,6 +192,18 @@ onMounted(async () => {
   width: 50px; /* Tu peux ajuster la taille comme tu veux */
   height: auto;
   margin-bottom: 5px;
+}
+
+.recommendations {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.recommended-movies {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
 }
 
 </style>

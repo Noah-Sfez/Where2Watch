@@ -1,56 +1,3 @@
-<template>
-  <main>
-    <!-- Zone de recherche et filtres -->
-    <div class="search-and-filters">
-      <div class="search-container">
-        <input
-          type="text"
-          placeholder="Rechercher des films, séries, acteurs..."
-          v-model="searchQuery"
-          @input="searchContent"
-        />
-      </div>
-      <!-- Filtres -->
-      <div class="filters">
-        <select v-model="selectedGenre" @change="applyFilters">
-          <option value="">Tous les genres</option>
-          <option v-for="genre in genres" :value="genre.id" :key="genre.id">{{ genre.name }}</option>
-        </select>
-        <select v-model="selectedRating" @change="applyFilters">
-          <option value="">Toutes les notes</option>
-          <option value="9">9 et plus</option>
-          <option value="8">8 et plus</option>
-          <option value="7">7 et plus</option>
-          <option value="6">6 et plus</option>
-          <option value="5">5 et plus</option>
-        </select>
-        <select v-model="selectedYear" @change="applyFilters">
-          <option value="">Toutes les années</option>
-          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-        </select>
-        <!--
-        <div v-for="service in streamingServices" :key="service.provider_id">
-          <input
-            type="checkbox"
-            :value="service.provider_id"
-            v-model="selectedStreamingServices"
-            @change="applyFilters"
-          >
-          <label>{{ service.provider_name }}</label>
-        </div>-->
-        <!-- Ajoute ici d'autres sélecteurs de filtre si nécessaire -->
-      </div>
-
-    </div>
-    <!-- Résultats de la recherche ou films par défaut -->
-    <div class="content-grid">
-      <div v-for="(item, index) in displayMovies" :key="item.id + 'display-' + index" class="content-item movie" @click="goToMovie(item)">
-        <img :src="getImageUrl(item)" :alt="item.title || item.name">
-        <h2>{{ item.title || item.name }}</h2>
-      </div>
-    </div>
-  </main>
-</template>
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
@@ -63,9 +10,22 @@ const filteredMovies = ref([]);
 const genres = ref([]);
 const streamingServices = ref([]);
 const popularStreamingServices = [
-  { id: 'Netflix_ID', name: 'Netflix' },
-  { id: 'AmazonPrime_ID', name: 'Amazon Prime' },
-  { id: 'Hulu_ID', name: 'Hulu' },
+  { id: '8', name: 'Netflix' },
+  { id: '119', name: 'Amazon Prime' },
+  { id: '337', name: 'Disney Plus' },
+  { id: '350', name: 'Apple TV Plus' },
+  { id: '283', name: 'Crunchyroll' },
+  { id: '381', name: 'Canal +' },
+  { id: '56', name: 'OCS Go' },
+  { id: '3', name: 'Google Play Movies' },
+  { id: '61', name: 'Orange VOD' },
+  { id: '234', name: 'Arte' },
+  { id: '68', name: 'Microsoft Store' },
+  { id: '188', name: 'Youtube Premium' },
+  { id: '35', name: 'Rakuten TV' },
+  { id: '1754', name: 'TF1' },
+  { id: '531', name: 'Paramount Plus' },
+  { id: '1967', name: 'Molotov TV' },
 ];
 const selectedRating = ref('');
 const selectedYear = ref('');
@@ -91,10 +51,11 @@ async function loadMovies() {
 }
 async function loadStreamingServices() {
   try {
-    const response = await axios.get(`${baseUrl}/watch/providers/movie?api_key=${apiKey}&language=fr-FR`);
-    streamingServices.value = response.data.results;
+    const apiKey = 'a446566ae142c41aa0fcfd2febbee065';
+    const response = await axios.get(`https://api.themoviedb.org/3/watch/providers/movie?api_key=${apiKey}&watch_region=FR`);
+    console.log(response.data.results); // Ceci te montrera tous les fournisseurs disponibles
   } catch (error) {
-    console.error('Erreur lors du chargement des fournisseurs de streaming:', error);
+    console.error("Erreur lors du chargement des fournisseurs de streaming:", error);
   }
 }
 onMounted(() => {
@@ -117,19 +78,25 @@ async function searchContent() {
 }
 async function applyFilters() {
   let url = `${baseUrl}/discover/movie?api_key=${apiKey}&language=fr-FR&sort_by=popularity.desc&include_adult=false&include_video=false`;
+
   if (selectedGenre.value) {
     url += `&with_genres=${selectedGenre.value}`;
   }
+
   if (selectedRating.value) {
     url += `&vote_average.gte=${selectedRating.value}`;
   }
+
   if (selectedYear.value) {
     url += `&primary_release_year=${selectedYear.value}`;
   }
+
+  // Ajouter le filtre pour les fournisseurs de streaming
   if (selectedStreamingServices.value.length > 0) {
     const providersIds = selectedStreamingServices.value.join('|'); // Utilise '|' comme séparateur si l'API le requiert
     url += `&with_watch_providers=${providersIds}&watch_region=FR`;
   }
+
   try {
     const response = await axios.get(url);
     filteredMovies.value = response.data.results;
@@ -166,7 +133,73 @@ onMounted(async () => {
   await loadStreamingServices();
 });
 </script>
+
+
+<template>
+  <main>
+    <!-- Zone de recherche et filtres -->
+    <div class="search-and-filters">
+      <div class="search-container">
+        <input
+          type="text"
+          placeholder="Rechercher des films, séries, acteurs..."
+          v-model="searchQuery"
+          @input="searchContent"
+        />
+      </div>
+      <!-- Filtres -->
+      <div class="filters">
+        <select v-model="selectedGenre" @change="applyFilters">
+          <option value="">Tous les genres</option>
+          <option v-for="genre in genres" :value="genre.id" :key="genre.id">{{ genre.name }}</option>
+        </select>
+        <select v-model="selectedRating" @change="applyFilters">
+          <option value="">Toutes les notes</option>
+          <option value="9">9 et plus</option>
+          <option value="8">8 et plus</option>
+          <option value="7">7 et plus</option>
+          <option value="6">6 et plus</option>
+          <option value="5">5 et plus</option>
+        </select>
+        <select v-model="selectedYear" @change="applyFilters">
+          <option value="">Toutes les années</option>
+          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+        </select>
+        <div class="services">
+          <div v-for="service in popularStreamingServices" :key="service.id">
+          <input
+            type="checkbox"
+            :id="`service-${service.id}`"
+            :value="service.id"
+            v-model="selectedStreamingServices"
+            @change="applyFilters"
+          >
+          <label :for="`service-${service.id}`">{{ service.name }}</label>
+        </div>
+        </div>
+        
+        <!-- Ajoute ici d'autres sélecteurs de filtre si nécessaire -->
+      </div>
+    </div>
+    <!-- Résultats de la recherche ou films par défaut -->
+    <div class="content-grid">
+      <div v-for="(item, index) in displayMovies" :key="item.id + 'display-' + index" class="content-item movie" @click="goToMovie(item)">
+        <img :src="getImageUrl(item)" :alt="item.title || item.name">
+        <h2>{{ item.title || item.name }}</h2>
+      </div>
+    </div>
+  </main>
+</template>
+
 <style>
+.services {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: auto;
+}
 .movie {
   margin: 20px;
   display: inline-block;
