@@ -22,7 +22,6 @@
     </div>
   </main>
 </template>
-
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
@@ -48,7 +47,7 @@ async function loadMovies() {
   }
 }
 async function searchMovies() {
-  if (searchQuery.value.length < 3) {
+  if (searchQuery.value.length < 2) {
     searchResults.value = [];
     return;
   }
