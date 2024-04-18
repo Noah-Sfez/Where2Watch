@@ -1,40 +1,22 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import { watchEffect } from 'vue';
 const searchQuery = ref('');
 const movies = ref([]); // Assure-toi que ceci est initialisé à un tableau vide.
 const searchResults = ref([]);
 const selectedGenre = ref('');
-const filteredMovies = ref([]);
+const upcomingMovies = ref([]);
 const genres = ref([]);
-const streamingServices = ref([]);
-const popularStreamingServices = [
-  { id: '8', name: 'Netflix' },
-  { id: '119', name: 'Amazon Prime' },
-  { id: '337', name: 'Disney Plus' },
-  { id: '350', name: 'Apple TV Plus' },
-  { id: '283', name: 'Crunchyroll' },
-  { id: '381', name: 'Canal +' },
-  { id: '56', name: 'OCS Go' },
-  { id: '3', name: 'Google Play Movies' },
-  { id: '61', name: 'Orange VOD' },
-  { id: '234', name: 'Arte' },
-  { id: '68', name: 'Microsoft Store' },
-  { id: '188', name: 'Youtube Premium' },
-  { id: '35', name: 'Rakuten TV' },
-  { id: '1754', name: 'TF1' },
-  { id: '531', name: 'Paramount Plus' },
-  { id: '1967', name: 'Molotov TV' },
-];
-const selectedRating = ref('');
-const selectedYear = ref('');
-const years = ref([]);
-const selectedStreamingServices = ref([]);
+const topRatedShows = ref([]);
+const recommendedMovies = ref([]);
 const router = useRouter();
 const apiKey = 'a446566ae142c41aa0fcfd2febbee065';
 const baseUrl = 'https://api.themoviedb.org/3';
-const displayMovies = computed(() => searchResults.value.length > 0 ? searchResults.value : filteredMovies.value.length > 0 ? filteredMovies.value : movies.value);
+const displayMovies = computed(() => {
+  return searchResults.value.length > 0 ? searchResults.value : movies.value;
+});
 async function loadMovies() {
   let allMovies = [];
   try {
@@ -49,88 +31,119 @@ async function loadMovies() {
     console.error(error);
   }
 }
-async function loadStreamingServices() {
-  try {
-    const apiKey = 'a446566ae142c41aa0fcfd2febbee065';
-    const response = await axios.get(`https://api.themoviedb.org/3/watch/providers/movie?api_key=${apiKey}&watch_region=FR`);
-    console.log(response.data.results); // Ceci te montrera tous les fournisseurs disponibles
-  } catch (error) {
-    console.error("Erreur lors du chargement des fournisseurs de streaming:", error);
-  }
-}
-onMounted(() => {
-  const currentYear = new Date().getFullYear();
-  for (let year = currentYear; year > currentYear - 30; year--) {
-    years.value.push(year);
-  }
-});
-async function searchContent() {
-  if (searchQuery.value.length < 2) {
-    searchResults.value = [];
-    return;
-  }
-  try {
-    const response = await axios.get(`${baseUrl}/search/multi?api_key=${apiKey}&language=fr-FR&query=${searchQuery.value}&page=1&include_adult=false`);
-    searchResults.value = response.data.results;
-  } catch (error) {
-    console.error(error);
-  }
-}
-async function applyFilters() {
-  let url = `${baseUrl}/discover/movie?api_key=${apiKey}&language=fr-FR&sort_by=popularity.desc&include_adult=false&include_video=false`;
 
-  if (selectedGenre.value) {
-    url += `&with_genres=${selectedGenre.value}`;
-  }
 
-  if (selectedRating.value) {
-    url += `&vote_average.gte=${selectedRating.value}`;
-  }
-
-  if (selectedYear.value) {
-    url += `&primary_release_year=${selectedYear.value}`;
-  }
-
-  // Ajouter le filtre pour les fournisseurs de streaming
-  if (selectedStreamingServices.value.length > 0) {
-    const providersIds = selectedStreamingServices.value.join('|'); // Utilise '|' comme séparateur si l'API le requiert
-    url += `&with_watch_providers=${providersIds}&watch_region=FR`;
-  }
-
-  try {
-    const response = await axios.get(url);
-    filteredMovies.value = response.data.results;
-  } catch (error) {
-    console.error("Erreur lors de l'application des filtres : ", error);
-  }
+function navigateToSearchPage() {
+  router.push({ name: 'SearchPage' });
 }
-async function loadGenres() {
-  try {
-    const response = await axios.get(`${baseUrl}/genre/movie/list?api_key=${apiKey}&language=fr-FR`);
-    genres.value = response.data.genres;
-  } catch (error) {
-    console.error('Erreur lors du chargement des genres:', error);
-  }
-}
-function goToMovie(result) {
-  const mediaType = result.media_type || 'movie'; // Assume 'movie' if media_type is not provided
-  if (mediaType === 'movie') {
-    router.push({ name: 'MovieDetails', params: { id: result.id } });
-  } else if (mediaType === 'tv') {
-    router.push({ name: 'TvShowDetails', params: { id: result.id } });
-  } else if (mediaType === 'person') {
-    router.push({ name: 'ActorDetails', params: { id: result.id } });
-  }
-}
+
 function getImageUrl(result) {
   return result.poster_path || result.profile_path
     ? `https://image.tmdb.org/t/p/w500${result.poster_path || result.profile_path}`
     : ''; // You may want to return a placeholder image URL here
 }
+//vider le localStorage
+function clearHistory() {
+  localStorage.removeItem('movieClickHistory');
+}
+
+function storeMovieClick(movieId) {
+  let history = JSON.parse(localStorage.getItem('movieClickHistory')) || [];
+  if (history.length >= 20) {
+    clearHistory();
+  }
+  history.push(movieId);
+  localStorage.setItem('movieClickHistory', JSON.stringify(history));
+}
+function goToMovie(result) {
+  console.log(result);
+  const mediaType = result.media_type || 'movie'; // Assume 'movie' if media_type is not provided
+  if (mediaType === 'movie') {
+    storeMovieClick(result.id);
+    router.push({ name: 'MovieDetails', params: { id: result.id } });
+  } else if (mediaType === 'tv') {
+    storeMovieClick(result.id);
+    router.push({ name: 'TvShowDetails', params: { id: result.id } });
+  } else if (mediaType === 'person') {
+    router.push({ name: 'ActorDetails', params: { id: result.id } });
+  }
+}
+function goToShow(show) {
+  router.push({ name: 'TvShowDetails', params: { id: show.id } });
+}
+
+async function fetchGenreCounts(movieIds) {
+  let genreCounts = {};
+  for (let id of movieIds) {
+    try {
+      const response = await axios.get(`${baseUrl}/movie/${id}?api_key=${apiKey}&language=fr-FR`);
+      response.data.genres.forEach(genre => {
+        genreCounts[genre.id] = (genreCounts[genre.id] || 0) + 1;
+      });
+    } catch (error) {
+      // Gère spécifiquement l'erreur 404 ou d'autres erreurs ici
+      if (error.response && error.response.status === 404) {
+        console.error(`Le film avec l'ID ${id} n'a pas été trouvé.`);
+      } else {
+        console.error(`Erreur lors de la récupération des genres pour le film ${id}:`, error);
+      }
+    }
+  }
+  return genreCounts;
+}
+
+async function loadUpcomingMovies() {
+  try {
+    const response = await axios.get(`${baseUrl}/movie/upcoming?api_key=${apiKey}&language=fr-FR`);
+    upcomingMovies.value = response.data.results;
+  } catch (error) {
+    console.error('Erreur lors du chargement des films à venir:', error);
+  }
+}
+
+onMounted(loadUpcomingMovies);
+async function loadTopRatedShows() {
+  try {
+    const response = await axios.get(`${baseUrl}/tv/top_rated?api_key=${apiKey}&language=fr-FR`);
+    topRatedShows.value = response.data.results;
+  } catch (error) {
+    console.error('Erreur lors du chargement des meilleures séries:', error);
+  }
+}
+
+onMounted(loadTopRatedShows);
+// Modification de la fonction pour qu'elle trie les genres et fasse des recommandations basées sur les deux genres les plus fréquents
+async function recommendMoviesBasedOnTopGenres() {
+  const movieClickHistory = localStorage.getItem('movieClickHistory');
+  console.log(movieClickHistory);
+  if (movieClickHistory) {
+    const movieIds = JSON.parse(movieClickHistory);
+    const genreCounts = await fetchGenreCounts(movieIds);
+    // Trie les genres par fréquence et prend les deux premiers
+    const topGenres = Object.entries(genreCounts)
+                             .sort((a, b) => b[1] - a[1])
+                             .slice(0, 2)
+      .map(entry => entry[0]);
+    console.log(topGenres);
+    let recommendations = [];
+    for (let genreId of topGenres) {
+      const response = await axios.get(`${baseUrl}/discover/movie?api_key=${apiKey}&with_genres=${genreId}&language=fr-FR`);
+      // Filtre les films déjà dans l'historique des clics et ajoute les nouveaux
+      const newRecommendations = response.data.results.filter(movie => !movieIds.includes(movie.id));
+      recommendations.push(...newRecommendations);
+    }
+    // Élimine les doublons et limite à 10 films
+    recommendedMovies.value = [...new Set(recommendations)].slice(0, 17);
+  }
+}
+
+// Utilise watchEffect pour déclencher les recommandations chaque fois que l'historique des clics change
+watchEffect(() => {
+  recommendMoviesBasedOnTopGenres();
+});
+
 onMounted(async () => {
   await loadMovies();
-  await loadGenres();
-  await loadStreamingServices();
 });
 </script>
 
@@ -144,54 +157,113 @@ onMounted(async () => {
           type="text"
           placeholder="Rechercher des films, séries, acteurs..."
           v-model="searchQuery"
+          @focus="navigateToSearchPage"
           @input="searchContent"
         />
       </div>
       <!-- Filtres -->
-      <div class="filters">
-        <select v-model="selectedGenre" @change="applyFilters">
-          <option value="">Tous les genres</option>
-          <option v-for="genre in genres" :value="genre.id" :key="genre.id">{{ genre.name }}</option>
-        </select>
-        <select v-model="selectedRating" @change="applyFilters">
-          <option value="">Toutes les notes</option>
-          <option value="9">9 et plus</option>
-          <option value="8">8 et plus</option>
-          <option value="7">7 et plus</option>
-          <option value="6">6 et plus</option>
-          <option value="5">5 et plus</option>
-        </select>
-        <select v-model="selectedYear" @change="applyFilters">
-          <option value="">Toutes les années</option>
-          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-        </select>
-        <div class="services">
-          <div v-for="service in popularStreamingServices" :key="service.id">
-          <input
-            type="checkbox"
-            :id="`service-${service.id}`"
-            :value="service.id"
-            v-model="selectedStreamingServices"
-            @change="applyFilters"
-          >
-          <label :for="`service-${service.id}`">{{ service.name }}</label>
+    </div>
+
+    <div v-if="recommendedMovies.length" class="recommendations">
+      <h2>Notre sélection pour vous</h2>
+      <div class="recommendations-container">
+        <div
+          v-for="movie in recommendedMovies"
+          :key="movie.id"
+          class="movie"
+          @click="goToMovie(movie)" 
+        >
+          <!-- Affiche les films recommandés ici -->
+          <img :src="getImageUrl(movie)" :alt="movie.title || movie.name">
+          <h3>{{ movie.title || movie.name }}</h3>
         </div>
+      </div>
+      <hr>
+    </div>
+
+    <div class="upcoming-movies-container">
+      <h2>Films à venir</h2>
+      <div class="upcoming-movies-scroll-container">
+        <div v-for="movie in upcomingMovies" :key="movie.id" class="movie" @click="goToMovie(movie)">
+          <img :src="`https://image.tmdb.org/t/p/w300${movie.poster_path}`" :alt="movie.title">
+          <h3>{{ movie.title }}</h3>
         </div>
-        
-        <!-- Ajoute ici d'autres sélecteurs de filtre si nécessaire -->
       </div>
     </div>
-    <!-- Résultats de la recherche ou films par défaut -->
-    <div class="content-grid">
-      <div v-for="(item, index) in displayMovies" :key="item.id + 'display-' + index" class="content-item movie" @click="goToMovie(item)">
-        <img :src="getImageUrl(item)" :alt="item.title || item.name">
-        <h2>{{ item.title || item.name }}</h2>
+    <hr>
+
+    <div class="top-rated-shows-container">
+      <h2>Meilleures séries</h2>
+      <div class="top-rated-shows-scroll-container">
+        <div v-for="show in topRatedShows" :key="show.id" class="movie" @click="goToShow(show)">
+          <img :src="`https://image.tmdb.org/t/p/w300${show.poster_path}`" :alt="show.name">
+          <h3>{{ show.name }}</h3>
+        </div>
       </div>
     </div>
   </main>
 </template>
 
 <style>
+.recommendations-container {
+  display: flex;
+  overflow-x: auto;
+  width: 100%; /* ou la largeur que vous souhaitez */
+  /* Ajoutez cette propriété si vous voulez masquer la barre de défilement */
+  -ms-overflow-style: none; /* pour Internet Explorer et Edge */
+  margin-bottom: 10px;
+}
+.upcoming-movies-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.top-rated-shows-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.top-rated-shows-scroll-container {
+  display: flex;
+  overflow-x: auto;
+  width: 100%; /* ou la largeur que vous souhaitez */
+  /* Ajoutez cette propriété si vous voulez masquer la barre de défilement */
+  -ms-overflow-style: none; /* pour Internet Explorer et Edge */
+  margin-bottom: 10px;
+}
+.top-rated-shows-scroll-container::-webkit-scrollbar {
+  width: 2px; /* largeur de la barre de défilement */
+}
+.upcoming-movies-scroll-container{
+  display: flex;
+  overflow-x: auto;
+  width: 100%; /* ou la largeur que vous souhaitez */
+  /* Ajoutez cette propriété si vous voulez masquer la barre de défilement */
+  -ms-overflow-style: none; /* pour Internet Explorer et Edge */
+  margin-bottom: 10px;
+} 
+.top-rated-shows-scroll-container {
+  display: flex;
+  overflow-x: auto;
+  width: 100%; /* ou la largeur que vous souhaitez */
+  /* Ajoutez cette propriété si vous voulez masquer la barre de défilement */
+  -ms-overflow-style: none; /* pour Internet Explorer et Edge */
+  margin-bottom: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #383838; /* couleur de la poignée de défilement */
+  border-radius: 9px;
+  width: 7px;
+}
+.recommendations-container::-webkit-scrollbar {
+  width: 2px; /* largeur de la barre de défilement */
+}
+.upcoming-movies-scroll-container::-webkit-scrollbar {
+  width: 2px; /* largeur de la barre de défilement */
+}
 .services {
   display: flex;
   align-items: center;
@@ -202,7 +274,9 @@ onMounted(async () => {
 }
 .movie {
   margin: 20px;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .movie img {
   width: 200px;  /* Ajuster selon le besoin */
