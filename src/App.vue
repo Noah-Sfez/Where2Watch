@@ -52,7 +52,7 @@ window.addEventListener('beforeinstallprompt', showInstallButton);
   <header>
     <nav>
         <RouterLink to="/" class="linknav">Home</RouterLink>
-        <button v-if="installable" @click="promptInstall">Installer l'app</button>
+        <button  @click="promptInstall">Installer l'app</button>
     </nav> 
     <div id="mySidenav" class="sidenav" :class="{ 'active': sidenavOpen }">
       <!-- Utilise @click.prevent pour appeler toggleSidenav et prévenir le comportement par défaut du lien -->
