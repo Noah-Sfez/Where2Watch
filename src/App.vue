@@ -1,68 +1,70 @@
 <script>
 import { RouterLink, RouterView } from 'vue-router';
 import { ref } from 'vue';
+
 export default {
   data() {
     return {
-      sidenavOpen: false
+      sidenavOpen: false,
+      installable: false,
+      deferredPrompt: null,
+      isIOS: this.checkForIOS()
     };
   },
   methods: {
     toggleSidenav() {
       this.sidenavOpen = !this.sidenavOpen;
+    },
+    showInstallButton(e) {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      this.installable = true;
+    },
+    promptInstall() {
+      if (this.deferredPrompt) {
+        this.deferredPrompt.prompt();
+        this.deferredPrompt.userChoice.then(({ outcome }) => {
+          if (outcome === 'accepted') {
+            console.log('L\'utilisateur a accepté l\'installation');
+          } else {
+            console.log('L\'utilisateur a refusé l\'installation');
+          }
+          this.deferredPrompt = null;
+          this.installable = false;
+        });
+      }
+    },
+    checkForIOS() {
+      return (
+        ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) ||
+        (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+      );
     }
+  },
+  mounted() {
+    window.addEventListener('beforeinstallprompt', this.showInstallButton);
+  },
+  beforeUnmount() {
+    window.removeEventListener('beforeinstallprompt', this.showInstallButton);
   }
 };
-// Référence réactive pour savoir si l'application est installable
-const installable = ref(false);
-// Référence réactive pour conserver l'événement de prompt d'installation
-const deferredPrompt = ref(null);
-// Fonction pour afficher le bouton d'installation
-const showInstallButton = (e) => {
-  // Empêcher le mini-infobar d'apparaître sur mobile
-  e.preventDefault();
-  // Sauvegarde de l'événement pour pouvoir le déclencher plus tard
-  deferredPrompt.value = e;
-  // Mettre à jour le statut installable pour afficher le bouton d'installation
-  installable.value = true;
-};
-
-// Fonction pour déclencher le prompt d'installation
-const promptInstall = async () => {
-  if (deferredPrompt.value) {
-    // Afficher le prompt d'installation
-    deferredPrompt.value.prompt();
-    // Attendre que l'utilisateur réponde à l'invite
-    const { outcome } = await deferredPrompt.value.userChoice;
-    if (outcome === 'accepted') {
-      console.log('L\'utilisateur a accepté l\'installation');
-    } else {
-      console.log('L\'utilisateur a refusé l\'installation');
-    }
-    // Nous n'avons plus besoin de l'événement après qu'il a été utilisé
-    deferredPrompt.value = null;
-    installable.value = false;
-  }
-};
-
-// Écoute pour l'événement 'beforeinstallprompt' qui indique que l'installation est possible
-window.addEventListener('beforeinstallprompt', showInstallButton);
 </script>
 <template>
   <header>
     <nav>
         <RouterLink to="/" class="linknav">Home</RouterLink>
-        <button v-if="installable" @click="promptInstall">Installer l'app</button>
+        <button v-if="installable && !isIOS" @click="promptInstall">Installer l'app</button>
+        <button v-if="isIOS" @click="toggleSidenav">Afficher sur l'écran d'accueil</button>
     </nav> 
     <div id="mySidenav" class="sidenav" :class="{ 'active': sidenavOpen }">
       <!-- Utilise @click.prevent pour appeler toggleSidenav et prévenir le comportement par défaut du lien -->
       <a id="closeBtn" href="#" class="close" @click.prevent="toggleSidenav">&times;</a>
       <ul>
         <li><RouterLink to="/" class="linknav">Home</RouterLink></li>
-        <button @click="promptInstall">Installer l'app</button>
+        <button v-if="installable && !isIOS" @click="promptInstall">Installer l'app</button>
+        <button v-if="isIOS" @click="toggleSidenav">Afficher sur l'écran d'accueil</button>
       </ul>
     </div>
-    <!-- Utilise @click.prevent pour appeler toggleSidenav ici aussi -->
     <a href="#" id="openBtn" @click.prevent="toggleSidenav">
       <span class="burger-icon">
         <span></span>
@@ -82,12 +84,10 @@ body {
   background-color: rgb(245, 245, 247);
   overflow-x: hidden;
 }
-
 .linknav {
  color: white;
  font-size: 1.2rem;
 }
-
 nav .linknav {
   position: relative;
   display: inline-block;
@@ -95,7 +95,6 @@ nav .linknav {
   overflow: hidden; /* Garde le pseudo-élément dans les limites du lien */
   text-decoration: none; /* Retire le soulignement par défaut */
 }
-
 nav .linknav::after {
   content: '';
   position: absolute;
@@ -106,13 +105,10 @@ nav .linknav::after {
   background-color: #ffffff; /* Couleur du trait */
   transition: width 0.3s ease 0s, left 0.3s ease 0s; /* Animation pour l'apparition du trait */
 }
-
 nav .linknav:hover::after {
   width: 100%; /* Le trait s'étend à 100% de la largeur du lien */
   left: 0; /* Déplace le trait pour qu'il commence depuis le bord gauche */
 }
-
-
 .mobile {
   display: none;
 }
@@ -126,12 +122,9 @@ nav{
   gap: 1%;
   color: white !important;
 }
-
 a {
   margin-right: 10%;
 }
-
-
 button {
   padding: 10px 20px;
   border: none;
