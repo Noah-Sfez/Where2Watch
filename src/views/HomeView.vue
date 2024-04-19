@@ -182,7 +182,7 @@ onMounted(async () => {
     </div>
 
     <div class="upcoming-movies-container">
-      <h2>Films à venir</h2>
+      <h2>Nouveautés</h2>
       <div class="upcoming-movies-scroll-container">
         <div v-for="movie in upcomingMovies" :key="movie.id" class="movie" @click="goToMovie(movie)">
           <img :src="`https://image.tmdb.org/t/p/w300${movie.poster_path}`" :alt="movie.title">
