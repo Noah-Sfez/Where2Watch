@@ -1,51 +1,56 @@
 <script>
+import { ref, onMounted, onUnmounted } from 'vue';
 import { RouterLink, RouterView } from 'vue-router';
-import { ref } from 'vue';
 
 export default {
-  data() {
-    return {
-      sidenavOpen: false,
-      installable: false,
-      deferredPrompt: null,
-      isIOS: this.checkForIOS()
-    };
-  },
-  methods: {
-    toggleSidenav() {
-      this.sidenavOpen = !this.sidenavOpen;
-    },
-    showInstallButton(e) {
-      e.preventDefault();
-      this.deferredPrompt = e;
-      this.installable = true;
-    },
-    promptInstall() {
-      if (this.deferredPrompt) {
-        this.deferredPrompt.prompt();
-        this.deferredPrompt.userChoice.then(({ outcome }) => {
-          if (outcome === 'accepted') {
-            console.log('L\'utilisateur a accepté l\'installation');
-          } else {
-            console.log('L\'utilisateur a refusé l\'installation');
-          }
-          this.deferredPrompt = null;
-          this.installable = false;
-        });
-      }
-    },
-    checkForIOS() {
-      return (
-        ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) ||
-        (navigator.userAgent.includes("Mac") && "ontouchend" in document)
-      );
+  setup() {
+    const installable = ref(false);
+    const deferredPrompt = ref(null);
+    const isIOS = ref((/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream));
+    const showModal = ref(false);
+    function checkForIOS() {
+      // Coerce the value into a boolean with double bang (!!)
+      isIOS.value = !!navigator.userAgent.match(/(iPod|iPhone|iPad)/) &&
+                    !window.MSStream &&
+                    navigator.userAgent.match(/AppleWebKit/);
     }
-  },
-  mounted() {
-    window.addEventListener('beforeinstallprompt', this.showInstallButton);
-  },
-  beforeUnmount() {
-    window.removeEventListener('beforeinstallprompt', this.showInstallButton);
+    function toggleModal() {
+      showModal.value = !showModal.value;
+    }
+    function showInstallButton(e) {
+      e.preventDefault();
+      deferredPrompt.value = e;
+      installable.value = true;
+    }
+
+    async function promptInstall() {
+      if (deferredPrompt.value) {
+        deferredPrompt.value.prompt();
+        const { outcome } = await deferredPrompt.value.userChoice;
+        if (outcome === 'accepted') {
+          console.log('User accepted the A2HS prompt');
+        } else {
+          console.log('User dismissed the A2HS prompt');
+        }
+        deferredPrompt.value = null;
+        installable.value = false;
+      }
+    }
+
+    onMounted(() => {
+      window.addEventListener('beforeinstallprompt', showInstallButton);
+      checkForIOS();
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('beforeinstallprompt', showInstallButton);
+    });
+
+    return {
+      installable,
+      isIOS,
+      promptInstall
+    };
   }
 };
 </script>
@@ -54,7 +59,7 @@ export default {
     <nav>
         <RouterLink to="/" class="linknav">Home</RouterLink>
         <button v-if="installable && !isIOS" @click="promptInstall">Installer l'app</button>
-        <button v-if="isIOS" @click="toggleSidenav">Afficher sur l'écran d'accueil</button>
+        <button v-if="isIOS" @click="toggleModal">Voir comment installer</button>
     </nav> 
     <div id="mySidenav" class="sidenav" :class="{ 'active': sidenavOpen }">
       <!-- Utilise @click.prevent pour appeler toggleSidenav et prévenir le comportement par défaut du lien -->
@@ -62,7 +67,7 @@ export default {
       <ul>
         <li><RouterLink to="/" class="linknav">Home</RouterLink></li>
         <button v-if="installable && !isIOS" @click="promptInstall">Installer l'app</button>
-        <button v-if="isIOS" @click="toggleSidenav">Afficher sur l'écran d'accueil</button>
+        <button v-if="isIOS" @click="toggleModal">Voir comment installer</button>
       </ul>
     </div>
     <a href="#" id="openBtn" @click.prevent="toggleSidenav">
@@ -73,6 +78,18 @@ export default {
       </span>
     </a>
   </header>
+  <div v-if="showModal" class="modal">
+    <div class="modal-content">
+      <span class="close" @click="toggleModal">&times;</span>
+      <h2>Installer sur iOS</h2>
+      <p>Pour ajouter cette application à votre écran d'accueil :</p>
+      <ol>
+        <li>Cliquez sur l'icône de partage en bas de votre navigateur Safari.</li>
+        <li>Faites défiler vers le bas et cliquez sur 'Sur l'écran d'accueil'.</li>
+        <li>Donnez un nom à l'application puis cliquez sur 'Ajouter'.</li>
+      </ol>
+    </div>
+  </div>
   <RouterView/>
   
 </template>
@@ -83,6 +100,39 @@ body {
   font-family: 'Roboto', sans-serif;
   background-color: rgb(245, 245, 247);
   overflow-x: hidden;
+}
+.modal {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
 }
 .linknav {
  color: white;
