@@ -1,5 +1,6 @@
 <script>
 import { RouterLink, RouterView } from 'vue-router';
+import { ref } from 'vue';
 export default {
   data() {
     return {
@@ -12,11 +13,46 @@ export default {
     }
   }
 };
+// Référence réactive pour savoir si l'application est installable
+const installable = ref(false);
+// Référence réactive pour conserver l'événement de prompt d'installation
+const deferredPrompt = ref(null);
+// Fonction pour afficher le bouton d'installation
+const showInstallButton = (e) => {
+  // Empêcher le mini-infobar d'apparaître sur mobile
+  e.preventDefault();
+  // Sauvegarde de l'événement pour pouvoir le déclencher plus tard
+  deferredPrompt.value = e;
+  // Mettre à jour le statut installable pour afficher le bouton d'installation
+  installable.value = true;
+};
+
+// Fonction pour déclencher le prompt d'installation
+const promptInstall = async () => {
+  if (deferredPrompt.value) {
+    // Afficher le prompt d'installation
+    deferredPrompt.value.prompt();
+    // Attendre que l'utilisateur réponde à l'invite
+    const { outcome } = await deferredPrompt.value.userChoice;
+    if (outcome === 'accepted') {
+      console.log('L\'utilisateur a accepté l\'installation');
+    } else {
+      console.log('L\'utilisateur a refusé l\'installation');
+    }
+    // Nous n'avons plus besoin de l'événement après qu'il a été utilisé
+    deferredPrompt.value = null;
+    installable.value = false;
+  }
+};
+
+// Écoute pour l'événement 'beforeinstallprompt' qui indique que l'installation est possible
+window.addEventListener('beforeinstallprompt', showInstallButton);
 </script>
 <template>
   <header>
     <nav>
         <RouterLink to="/" class="linknav">Home</RouterLink>
+        <button v-if="installable" @click="promptInstall">Installer l'app</button>
     </nav> 
     <div id="mySidenav" class="sidenav" :class="{ 'active': sidenavOpen }">
       <!-- Utilise @click.prevent pour appeler toggleSidenav et prévenir le comportement par défaut du lien -->
@@ -94,31 +130,18 @@ a {
   margin-right: 10%;
 }
 
-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  justify-content: center;
-  justify-items: center;
-  align-items: center;
-  background-color: rgb(245, 245, 247);
-  padding: 1rem;
-  gap: 1%;
-}
 
-.mail {
-  color: black;
-  text-decoration: none;
+button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
 }
-
-.icones {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.icones img {
-  width: 3rem;
-  height: auto;
+button:hover {
+  background-color: #0056b3;
 }
 
 .sidenav {
