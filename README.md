@@ -1,29 +1,59 @@
-# art-galerie
+# Where2Watch
 
-This template should help get you started developing with Vue 3 in Vite.
+Where2Watch is a project designed to help users find where their favorite movies and TV shows are available for streaming.
 
-## Recommended IDE Setup
+## Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Search for movies and TV shows.
+- Get streaming platform availability.
+- User-friendly interface.
 
-## Customize configuration
+## Installation
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/Noah-Sfez/Where2Watch.git
+    ```
+2. Navigate to the project directory:
+    ```bash
+    cd where2watch
+    ```
+3. Install dependencies:
+    ```bash
+    npm install
+    ```
 
-## Project Setup
+## Usage
 
-```sh
-npm install
-```
+1. Start the development server:
+    ```bash
+    npm start
+    ```
+2. Open your browser and navigate to `http://localhost:3000`.
 
-### Compile and Hot-Reload for Development
+## Contributing
 
-```sh
-npm run dev
-```
+Contributions are welcome! Please follow these steps:
 
-### Compile and Minify for Production
+1. Fork the repository.
+2. Create a new branch:
+    ```bash
+    git checkout -b feature-name
+    ```
+3. Commit your changes:
+    ```bash
+    git commit -m "Add feature-name"
+    ```
+4. Push to your branch:
+    ```bash
+    git push origin feature-name
+    ```
+5. Open a pull request.
 
-```sh
-npm run build
-```
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## Contact
+
+For any inquiries, please contact [sfz.noah@gmail.com].

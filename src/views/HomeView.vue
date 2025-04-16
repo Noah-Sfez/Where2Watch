@@ -173,7 +173,6 @@ onMounted(async () => {
           class="movie"
           @click="goToMovie(movie)" 
         >
-          <!-- Affiche les films recommandés ici -->
           <img :src="getImageUrl(movie)" :alt="movie.title || movie.name">
           <h3>{{ movie.title || movie.name }}</h3>
         </div>
